@@ -244,8 +244,15 @@ if st.session_state.messages[-1]["role"] == "user":
         inventory_str = ", ".join(st.session_state.inventory) if st.session_state.inventory else "空"
         prev_gm_msg = st.session_state.messages[-2]['content'] if len(st.session_state.messages) > 1 else ""
         current_chapter_intro = CHAPTER_CONTENT.get(st.session_state.current_chapter_name, "")
+        # 🔒 後台動態控速與防亂擲骰安全機制（新增第五幕限流計時器）
         if "第四幕" in st.session_state.current_chapter_name:
             dice_lock_instruction = "【當前遊戲模式】：⚔️ 戰鬥模式。在玩家宣布行動後，你必須只描寫起手式，並在回覆最末尾輸出『【要求判定】』來引導玩家擲骰，切勿直接寫出結果。"
+        elif "第五幕" in st.session_state.current_chapter_name:
+            # 🏁 🌟 當第五幕來到第 3 回合或以上，強行命令 AI 給令牌結案 🌟
+            if st.session_state.turn_count >= 3:
+                dice_lock_instruction = "【當前遊戲模式】：🏁 強制終局落幕！玩家提問次數已達上限。你現在必須由城隍爺正式授予玩家代行令牌，並描述廟門開啟、通往黑暗的道路，以及神秘聲音（『終於……找到持珠之人了』）。妳【必須】在回覆內容的最後一行輸出『【序章完結】』暗號標籤，且【絕對禁止】輸出 ### OPTIONS ### 或任何選項！"
+            else:
+                dice_lock_instruction = "【當前遊戲模式】：🧭 終局對話模式。此章節為文戲，主要解答玩家關於（為何是我、那些人是誰、法器有多少、可否拒絕）的提問。請在回覆最後一行提供 ### OPTIONS ### 供玩家繼續了解。"
         else:
             dice_lock_instruction = "【當前遊戲模式】：🧭 純文字探索模式。此章節為文戲，完全不需要任何擲骰、判定或點數。請直接演繹主角行動成功的生動後果，並在回覆最後一條線照常提供 ### OPTIONS ### 選項。請勿出現任何關於判定或要求擲骰的字眼。"
         final_prompt = f"""
@@ -291,9 +298,15 @@ if st.session_state.messages[-1]["role"] == "user":
                 ai_text = response.text
                 
                 # 🏁 🌟 終局完結鎖定攔截器（必須完全收納在 try 內、拿到 ai_text 後才執行） 🌟
-                if "【序章完結】" in ai_text:
+                # 🏁 🌟 終局完結鎖定攔截器 (模糊比對版：防止 AI 漏打括號) 🌟
+                if "序章完結" in ai_text:
                     st.session_state.game_over = True
-                    ai_text = ai_text.replace("【序章完結】", "") # 把暗號抹除，不讓玩家穿幫
+                    # 徹底清空所有變體的暗號字眼，防止穿幫
+                    ai_text = ai_text.replace("【序章完結】", "").replace("[序章完結]", "").replace("序章完結", "")
+                
+                # 🛡️ 🌟 Python 鋼鐵保險絲：如果第五幕玩家一直聊、拖到第 4 回合 AI 還不結案，Python 自動強制拉閘 🌟
+                if "第五幕" in st.session_state.current_chapter_name and st.session_state.turn_count >= 4:
+                    st.session_state.game_over = True
                     
         except Exception as e:
             # 3. 🧠 升級防護罩：智慧過濾技術錯誤，不再把醜醜的英文直接丟給玩家
