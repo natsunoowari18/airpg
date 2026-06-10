@@ -203,8 +203,13 @@ if st.session_state.messages[-1]["role"] == "user":
         inventory_str = ", ".join(st.session_state.inventory) if st.session_state.inventory else "空"
         prev_gm_msg = st.session_state.messages[-2]['content'] if len(st.session_state.messages) > 1 else ""
         current_chapter_intro = CHAPTER_CONTENT.get(st.session_state.current_chapter_name, "")
+        if "第四幕" in st.session_state.current_chapter_name:
+            dice_lock_instruction = "【當前擲骰權限】：允許使用。你可以且必須在玩家宣布行動後，回覆末尾輸出『【要求判定】』來觸發擲骰子。"
+        else:
+            dice_lock_instruction = "【當前擲骰權限】：🚫 絕對禁止！當前是非戰鬥章節，你【百分之百絕對嚴禁】輸出『【要求判定】』標籤！不准叫玩家丟骰子！請直接根據合理性描述玩家行動成功的結果，並直接在結尾給出 ### OPTIONS ###。"
         final_prompt = f"""
         【當前所在章節】：{st.session_state.current_chapter_name}
+        【最高指令】：{dice_lock_instruction}
         【當前章節已進行回合數】：{st.session_state.turn_count} / 5 回合
         【本章節官方場景設定】：{current_chapter_intro}
         【玩家當前背包】：{inventory_str}
