@@ -175,7 +175,8 @@ for i, msg in enumerate(st.session_state.messages):
             
             # 純淨版 D20 擲骰器 (沒有任何加值計算)
             # 🧭 動態場景選項按鈕 (加上終局防護鎖)
-            if msg["role"] == "assistant" and "### OPTIONS ###" in msg["content"] and not st.session_state.game_over:
+            # 🎲 戰鬥專用 D20 擲骰按鈕 (🔒 加上 Python 鋼鐵硬核鎖，只有在第四幕才允許天天亮起擲骰按鈕)
+            if msg["role"] == "assistant" and re.search(r"【要求判定.*?】", msg["content"]) and "第四幕" in st.session_state.current_chapter_name:
                 st.warning("⚠️ 命運的時刻到了！請擲出一顆 20 面骰 (1D20)...")
                 if st.button("🎲 擲出 D20 並送出"):
                     roll = random.randint(1, 20)
@@ -244,9 +245,9 @@ if st.session_state.messages[-1]["role"] == "user":
         prev_gm_msg = st.session_state.messages[-2]['content'] if len(st.session_state.messages) > 1 else ""
         current_chapter_intro = CHAPTER_CONTENT.get(st.session_state.current_chapter_name, "")
         if "第四幕" in st.session_state.current_chapter_name:
-            dice_lock_instruction = "【當前擲骰權限】：允許使用。你可以且必須在玩家宣布行動後，回覆末尾輸出『【要求判定】』來觸發擲骰子。"
+            dice_lock_instruction = "【當前遊戲模式】：⚔️ 戰鬥模式。在玩家宣布行動後，你必須只描寫起手式，並在回覆最末尾輸出『【要求判定】』來引導玩家擲骰，切勿直接寫出結果。"
         else:
-            dice_lock_instruction = "【當前擲骰權限】：🚫 絕對禁止！當前是非戰鬥章節，你【百分之百絕對嚴禁】輸出『【要求判定】』標籤！不准叫玩家丟骰子！請直接根據合理性描述玩家行動成功的結果，並直接在結尾給出 ### OPTIONS ###。"
+            dice_lock_instruction = "【當前遊戲模式】：🧭 純文字探索模式。此章節為文戲，完全不需要任何擲骰、判定或點數。請直接演繹主角行動成功的生動後果，並在回覆最後一條線照常提供 ### OPTIONS ### 選項。請勿出現任何關於判定或要求擲骰的字眼。"
         final_prompt = f"""
         【當前所在章節】：{st.session_state.current_chapter_name}
         【最高指令】：{dice_lock_instruction}
