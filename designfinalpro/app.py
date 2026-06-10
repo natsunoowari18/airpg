@@ -280,16 +280,30 @@ if st.session_state.messages[-1]["role"] == "user":
             response = gm_model.generate_content(final_prompt, safety_settings=safety_settings)
             
             # 檢查是否被安全機制攔截
+            try:
+            response = gm_model.generate_content(final_prompt, safety_settings=safety_settings)
+            
+            # 1. 檢查是否完全沒有候選回覆
             if not response.candidates or len(response.candidates) == 0:
                 ai_text = "【系統提示】天機不可洩漏...此處陰氣過重，神明推演受到干擾，請嘗試重新輸入或更換其他行動選項。### OPTIONS ###\n- 緊握算盤珠，警惕地後退，尋找離開市場的出口。\n- 嘗試呼喚周圍的攤販，尋求協助。"
             else:
+                # 2. 嘗試讀取文字（若因 finish_reason 導致無 Part 崩潰，會自動跳到下方的 except 處理）
                 ai_text = response.text
-            # 🏁 🌟 新增：終局完結鎖定攔截器 🌟
-        if "【序章完結】" in ai_text:
-            st.session_state.game_over = True
-            ai_text = ai_text.replace("【序章完結】", "") # 把暗號抹除，不讓玩家穿幫
+                
+                # 🏁 🌟 終局完結鎖定攔截器（必須完全收納在 try 內、拿到 ai_text 後才執行） 🌟
+                if "【序章完結】" in ai_text:
+                    st.session_state.game_over = True
+                    ai_text = ai_text.replace("【序章完結】", "") # 把暗號抹除，不讓玩家穿幫
+                    
         except Exception as e:
-            ai_text = f"【系統提示】與城隍爺的連線受到干擾 ({str(e)})，請再試一次。### OPTIONS ###\n- 觀察孩子現在的狀態，試圖與他對話。"
+            # 3. 🧠 升級防護罩：智慧過濾技術錯誤，不再把醜醜的英文直接丟給玩家
+            error_msg = str(e)
+            if "finish_reason" in error_msg or "Part" in error_msg:
+                # 專門針對「查重被鎖（代碼8）」或「安全機制誤攔截」進行劇情化包裝
+                ai_text = "【系統提示】此處陰陽磁場劇烈震盪，黑霧擴散干擾了命運的推演...請換個方式重新點選。### OPTIONS ###\n- 觀察孩子現在的狀態，試圖與他對話。\n- 緊握算盤珠，警惕地後退，尋找出口。"
+            else:
+                # 其他一般網路連線錯誤
+                ai_text = "【系統提示】與城隍廟的法力連線受到干擾，請再試一次。### OPTIONS ###\n- 觀察孩子現在的狀態，試圖與他對話。"
 
         # 轉場攔截器
         chapter_transition_match = re.search(r"【進入章節：(.*?)】", ai_text)
