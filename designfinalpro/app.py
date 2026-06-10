@@ -276,11 +276,10 @@ if st.session_state.messages[-1]["role"] == "user":
         ]
         
         # 🌟 新增 try...except 防呆，防止網頁因 API 錯誤而崩潰 🌟
-        try:
-            response = gm_model.generate_content(final_prompt, safety_settings=safety_settings)
+        
             
             # 檢查是否被安全機制攔截
-            try:
+        try:
             response = gm_model.generate_content(final_prompt, safety_settings=safety_settings)
             
             # 1. 檢查是否完全沒有候選回覆
