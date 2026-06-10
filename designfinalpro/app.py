@@ -58,7 +58,7 @@ gm_model = genai.GenerativeModel(
     ● 第五幕：城隍降臨，授予差使身分
       - 可互動對象：【城隍爺】、【判官】。
       - 核心線索：解答玩家提問（為何是我、那些人是誰、法器有多少、可否拒絕）。
-      - 身分授予：城隍爺抬手，浮現令牌。在你確認玩家接下令牌的那一回合，回覆末尾必須附上標籤：[ITEMS: +令牌]。隨後開啟廟門通往黑暗道路，宣告序章完結。
+      - 身分授予與完結鐵律：城隍爺抬手，浮現令牌。在你確認玩家接下令牌、宣告序章完結（神秘聲音「終於……找到持珠之人了」）的那一回合，你【必須】在回覆內容的最末端輸出『【序章完結】』標籤，且【絕對禁止】再附帶 ### OPTIONS ###！這代表故事的終局。
 
     【背包規則】(絕對防塞道具版)：
     嚴禁主動、自動幫玩家拾取任何東西！必須等玩家點選或輸入「撿起、收入背包」的那一回合，才能在最後一行（### OPTIONS ### 之前），附上獨立標籤：[ITEMS: +物品名稱]。
@@ -96,6 +96,8 @@ if "turn_count" not in st.session_state:
     st.session_state.turn_count = 0
 if "current_chapter_name" not in st.session_state:
     st.session_state.current_chapter_name = "第一幕：東市場日常與異常傳聞"
+if "game_over" not in st.session_state: # 🌟 新增：終局落幕開關
+    st.session_state.game_over = False
 
 # ==========================================
 # UI 區：側邊欄 (極簡化版)
@@ -172,7 +174,8 @@ for i, msg in enumerate(st.session_state.messages):
         if i == len(st.session_state.messages) - 1:
             
             # 純淨版 D20 擲骰器 (沒有任何加值計算)
-            if msg["role"] == "assistant" and re.search(r"【要求判定.*?】", msg["content"]):
+            # 🧭 動態場景選項按鈕 (加上終局防護鎖)
+            if msg["role"] == "assistant" and "### OPTIONS ###" in msg["content"] and not st.session_state.game_over:
                 st.warning("⚠️ 命運的時刻到了！請擲出一顆 20 面骰 (1D20)...")
                 if st.button("🎲 擲出 D20 並送出"):
                     roll = random.randint(1, 20)
@@ -195,10 +198,39 @@ for i, msg in enumerate(st.session_state.messages):
 # ==========================================
 # 邏輯區：處理輸入與 AI 生成
 # ==========================================
-if user_input := st.chat_input("請輸入行動..."):
-    st.session_state.turn_count += 1
-    st.session_state.messages.append({"role": "user", "content": user_input})
-    st.rerun()
+# ==========================================
+# ⚙️ 後台區：處理對話輸入與 AI 推演
+# ==========================================
+# 🔒 透過 Python 邏輯控制終局：未完結時才顯示輸入框
+if not st.session_state.game_over:
+    if user_input := st.chat_input("輸入妳的自由行動或提問..."):
+        st.session_state.turn_count += 1
+        st.session_state.messages.append({"role": "user", "content": user_input})
+        st.rerun()
+else:
+    # 🌟 🎉 當 game_over 為 True 時，輸入框永久消失，替換為精美的通關字卡 🎉 🌟
+    st.markdown("---")
+    st.success("🎉 **《城隍的小差使：序章》已圓滿落幕！**")
+    st.balloons() # 畫面自動噴發滿滿的慶祝氣球！
+    
+    st.markdown("""
+    <div style='background-color: #262730; padding: 20px; border-radius: 10px; border: 1px solid #ffaa00; text-align: center;'>
+        <h4 style='color: #ffaa00; margin-bottom: 10px;'>🏮 恭喜通關 🏮</h4>
+        <p style='font-size: 14px; color: #cccccc;'>
+            妳已成功接下城隍爺的代行令牌，正式成為「城隍差使」。<br>
+            遺失民間的法器正散落各處，未知的黑暗勢力也在伺機而動……<br>
+            <b>妳與城隍廟的兩界冒險，才正要開始！</b>
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    st.write("")
+    
+    # 提供一鍵重開機按鈕，清空跑團紀錄，但保留 API Key
+    if st.button("🔄 重頭開始新一輪差使冒險", use_container_width=True):
+        for key in list(st.session_state.keys()):
+            if key != "GOOGLE_API_KEY": # 保護金鑰不被刪除
+                del st.session_state[key]
+        st.rerun()
 
 if st.session_state.messages[-1]["role"] == "user":
     with st.spinner("神明正在推演命運..."):
@@ -252,6 +284,10 @@ if st.session_state.messages[-1]["role"] == "user":
                 ai_text = "【系統提示】天機不可洩漏...此處陰氣過重，神明推演受到干擾，請嘗試重新輸入或更換其他行動選項。### OPTIONS ###\n- 緊握算盤珠，警惕地後退，尋找離開市場的出口。\n- 嘗試呼喚周圍的攤販，尋求協助。"
             else:
                 ai_text = response.text
+            # 🏁 🌟 新增：終局完結鎖定攔截器 🌟
+        if "【序章完結】" in ai_text:
+            st.session_state.game_over = True
+            ai_text = ai_text.replace("【序章完結】", "") # 把暗號抹除，不讓玩家穿幫
         except Exception as e:
             ai_text = f"【系統提示】與城隍爺的連線受到干擾 ({str(e)})，請再試一次。### OPTIONS ###\n- 觀察孩子現在的狀態，試圖與他對話。"
 
