@@ -64,7 +64,7 @@ gm_model = genai.GenerativeModel(
 # 資料庫連線
 @st.cache_resource
 def get_database():
-    return chromadb.PersistentClient(path="./chroma_data").get_collection(name="trpg_world")
+    return chromadb.PersistentClient(path="designfinalpro/chroma_data").get_collection(name="trpg_world")
 
 collection = get_database()
 
