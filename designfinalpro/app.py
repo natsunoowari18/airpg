@@ -126,11 +126,11 @@ def show_item_popup(item_name):
     item_images = {
         "算盤珠": "designfinalpro/O1CN01qEmvZo26SnKxpPego___503417661.jpg_300x300q50.jpg_-removebg-preview.png", # 暫代：黑檀木香火意象圖
         "平安符": "E5_B9_B3_E5_AE_89_E7_AC_A62-removebg-preview.png", # 暫代：紅色平安御守意象圖
-        "令牌": "images__1_-removebg-preview.png",   # 暫代：古風金色令牌/印章意象圖
+        "令牌": "designfinalpro/images__1_-removebg-preview.png",   # 暫代：古風金色令牌/印章意象圖
     }
     
     # 模糊比對：防範 AI 有時候標籤會多字或少字（例如寫「老舊平安符」或「城隍令牌」）
-    matched_image = "O1CN01qEmvZo26SnKxpPego___503417661.jpg_300x300q50.jpg_-removebg-preview.png" # 如果都沒對到，用預設神秘光芒圖
+    matched_image = "designfinalpro/images__1_-removebg-preview.png" # 如果都沒對到，用預設神秘光芒圖
     
     for key, url in item_images.items():
         if key in item_name: # 只要玩家獲得的道具名字裡包含「算盤珠」、「平安符」或「令牌」
